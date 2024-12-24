@@ -1,3 +1,5 @@
+// src/core/database/repositories/userRepository.ts
+
 import { User, PrismaClient } from "@prisma/client";
 import { BaseRepository } from "../baseRepository";
 
@@ -10,7 +12,9 @@ export class UserRepository extends BaseRepository {
       where: { id: discordId },
       create: {
         id: discordId,
-        ...data,
+        pressureLevel: data?.pressureLevel ?? 3,
+        notificationEnabled: data?.notificationEnabled ?? true,
+        activeCharacterId: data?.activeCharacterId,
       },
       update: data || {},
     });
@@ -32,10 +36,7 @@ export class UserRepository extends BaseRepository {
     discordId: string,
     characterId: string
   ): Promise<User> {
-    return this.prisma.user.update({
-      where: { id: discordId },
-      data: { activeCharacterId: characterId },
-    });
+    return this.upsert(discordId, { activeCharacterId: characterId });
   }
 
   /**
@@ -46,9 +47,6 @@ export class UserRepository extends BaseRepository {
       throw new Error("Pressure level must be between 1 and 5");
     }
 
-    return this.prisma.user.update({
-      where: { id: discordId },
-      data: { pressureLevel: level },
-    });
+    return this.upsert(discordId, { pressureLevel: level });
   }
 }

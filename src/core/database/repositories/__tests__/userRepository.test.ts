@@ -1,3 +1,5 @@
+// src/core/database/repositories/__tests__/userRepository.test.ts
+
 import { UserRepository } from "../userRepository";
 import { db } from "../../client";
 import { PrismaClient } from "@prisma/client";
@@ -21,46 +23,57 @@ describe("UserRepository", () => {
     await prisma.user.deleteMany();
   });
 
-  describe("upsert", () => {
-    it("should create a new user when user does not exist", async () => {
-      const discordId = "123456789";
-      const user = await repository.upsert(discordId);
+  describe("updateActiveCharacter", () => {
+    it("should create user and update character if user does not exist", async () => {
+      const discordId = "test-user-1";
+      const characterId = "reina";
 
-      expect(user).toBeDefined();
+      const user = await repository.updateActiveCharacter(
+        discordId,
+        characterId
+      );
+
       expect(user.id).toBe(discordId);
-      expect(user.pressureLevel).toBe(3); // デフォルト値
+      expect(user.activeCharacterId).toBe(characterId);
     });
 
-    it("should update existing user", async () => {
-      const discordId = "123456789";
+    it("should update existing user's character", async () => {
+      const discordId = "test-user-2";
+      // 先にユーザーを作成
       await repository.upsert(discordId);
 
-      const updated = await repository.upsert(discordId, {
-        pressureLevel: 4,
-        activeCharacterId: "reina",
-      });
+      const characterId = "saeki";
+      const user = await repository.updateActiveCharacter(
+        discordId,
+        characterId
+      );
 
-      expect(updated.pressureLevel).toBe(4);
-      expect(updated.activeCharacterId).toBe("reina");
+      expect(user.id).toBe(discordId);
+      expect(user.activeCharacterId).toBe(characterId);
     });
   });
 
-  describe("updatePressureLevel", () => {
-    it("should update pressure level", async () => {
-      const discordId = "123456789";
-      await repository.upsert(discordId);
+  describe("upsert", () => {
+    it("should create new user with default values", async () => {
+      const discordId = "test-user-3";
+      const user = await repository.upsert(discordId);
 
-      const updated = await repository.updatePressureLevel(discordId, 5);
-      expect(updated.pressureLevel).toBe(5);
+      expect(user.id).toBe(discordId);
+      expect(user.pressureLevel).toBe(3);
+      expect(user.notificationEnabled).toBe(true);
     });
 
-    it("should throw error for invalid pressure level", async () => {
-      const discordId = "123456789";
+    it("should update existing user with new values", async () => {
+      const discordId = "test-user-4";
       await repository.upsert(discordId);
 
-      await expect(
-        repository.updatePressureLevel(discordId, 6)
-      ).rejects.toThrow("Pressure level must be between 1 and 5");
+      const updatedUser = await repository.upsert(discordId, {
+        pressureLevel: 4,
+        activeCharacterId: "kujo",
+      });
+
+      expect(updatedUser.pressureLevel).toBe(4);
+      expect(updatedUser.activeCharacterId).toBe("kujo");
     });
   });
 });

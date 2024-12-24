@@ -33,8 +33,8 @@ export class CharacterService {
     },
   };
 
-  getCharacterProfile(id: CharacterId): CharacterProfile {
-    return this.characters[id];
+  getCharacterProfile(id: string): CharacterProfile | undefined {
+    return this.characters[id as CharacterId];
   }
 
   // キャラクターごとの文言管理、プレッシャーレベルの計算など

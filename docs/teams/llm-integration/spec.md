@@ -6,9 +6,10 @@ OpenAI APIを利用した自然言語処理、対話生成、コマンド解釈�
 
 ## 2. 技術スタック
 
-- OpenAI API (GPT-4)
+- OpenAI API (GPT-4o)
 - Function Calling
 - TypeScript
+- Discord.js
 
 ## 3. 主要機能実装
 
@@ -21,80 +22,106 @@ class LLMService {
   ): Promise<LLMResponse>
   
   async generateCharacterResponse(
-    character: Character,
-    context: DialogueContext
+    input: string,
+    context: CharacterContext
   ): Promise<string>
   
-  async interpretCommand(
-    input: string
+  async streamCharacterResponse(
+    input: string,
+    context: CharacterContext,
+    handler: StreamHandler
+  ): Promise<void>
+
+  async interpretTaskCommand(
+    input: string,
+    context: CharacterContext
   ): Promise<CommandInterpretation>
 }
 ```
 
-### 3.2 Function Definitions
-```typescript
-const functions = {
-  add_task: {
-    name: "add_task",
-    parameters: {
-      title: "string",
-      deadline: "string",
-      priority: "string",
-      description: "string?"
-    }
-  },
-  update_progress: {
-    name: "update_progress",
-    parameters: {
-      task_id: "string",
-      progress: "number"
-    }
-  }
-  // ... その他の関数定義
-}
-```
+### 3.2 Function Calling
+- タスク作成
+- タスク進捗更新
+- タスク完了
+- キャラクター応答生成
+- プレッシャー調整
 
-## 4. プロンプト設計
+詳細は [functions.md](./functions.md) を参照
 
-### 4.1 システムプロンプト
-```text
-あなたは{character_name}として振る舞い、以下の特徴を持ちます：
-- 性格: {personality}
-- 口調: {speaking_style}
-- プレッシャーレベル: {pressure_level}
+## 4. 対話機能
 
-ユーザーのタスク管理を支援し、適切なプレッシャーをかけながら
-進捗を管理してください。
-```
+### 4.1 通常の対話
+- キャラクター性を反映した応答生成
+- コンテキストに基づく一貫性のある対話
+- プレッシャーレベルに応じた応答調整
 
-### 4.2 コンテキスト管理
-- ユーザーの過去の対話履歴
-- タスクの進捗状況
-- 時間帯や締切との関係
-- キャラクターの状態
+### 4.2 タスク解釈
+- 自然言語からのタスク情報抽出
+- 日時解釈（"明日まで"などの相対表現）
+- 優先度の自動判定
 
-## 5. エラーハンドリング
+### 4.3 ストリーミング応答
+- 段階的なメッセージ表示
+- 途中経過の表示
+- エラーハンドリング
 
-- API接続エラー対応
+## 5. デバッグ機能
+
+### 5.1 Debug Command
+- `/chat debug` コマンドの実装
+- Function Call解析結果の表示
+- 実行可能なアクションの提示
+
+### 5.2 デバッグ情報
+- 入力メッセージ
+- 解析されたコマンド
+- パラメータ詳細
+- 実行結果
+
+## 6. エラーハンドリング
+
+### 6.1 API関連
+- OpenAI API接続エラー
 - レート制限対応
-- 不適切な応答のフィルタリング
+- タイムアウト処理
+
+### 6.2 解析関連
+- 不正な日付の補正
+- 不明なコマンドの処理
+- パラメータ検証
+
+## 7. 今後の拡張予定
+
+### 7.1 優先実装項目
+- 会話履歴の管理
+- コンテキスト管理の強化
+- 音声対話への対応準備
+
+### 7.2 改善項目
+- プロンプトの最適化
+- 応答品質の向上
+- パフォーマンスの最適化
+
+## 8. テスト要件
+
+### 8.1 単体テスト
+- LLMService
+- Function Calling
+- エラーハンドリング
+
+### 8.2 統合テスト
+- Discord対話フロー
+- キャラクター応答生成
+- タスク管理連携
+
+## 9. セキュリティ
+
+### 9.1 API管理
+- APIキーの安全な管理
+- 環境変数による設定
+- レート制限の実装
+
+### 9.2 入力検証
+- ユーザー入力のサニタイズ
 - プロンプトインジェクション対策
-
-## 6. 最適化
-
-### 6.1 トークン使用量
-- コンテキスト圧縮
-- 必要最小限の履歴保持
-- 効率的なプロンプト設計
-
-### 6.2 レイテンシ
-- キャッシュの活用
-- 非同期処理の活用
-- バッチ処理の検討
-
-## 7. テスト要件
-
-- プロンプトテスト
-- Function Callingテスト
-- エラーハンドリングテスト
-- 応答品質テスト
+- パラメータの検証

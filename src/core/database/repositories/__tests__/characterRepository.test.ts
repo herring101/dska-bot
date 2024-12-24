@@ -1,3 +1,4 @@
+// src/core/characters/__tests__/characterService.test.ts
 import { CharacterRepository } from "../characterRepository";
 import { UserRepository } from "../userRepository";
 import { db } from "../../client";
@@ -12,14 +13,9 @@ describe("CharacterRepository", () => {
   const characterId = "reina";
 
   beforeAll(async () => {
-    await db.connect();
     prisma = db.getClient();
     repository = new CharacterRepository();
     userRepository = new UserRepository();
-
-    // テスト用ユーザーを作成
-    userId = "test-user-123";
-    await userRepository.upsert(userId);
   });
 
   afterAll(async () => {
@@ -30,6 +26,11 @@ describe("CharacterRepository", () => {
 
   beforeEach(async () => {
     await prisma.characterInteraction.deleteMany();
+    await prisma.user.deleteMany();
+
+    // テストの前にユーザーを作成
+    userId = "test-user-123";
+    await userRepository.upsert(userId);
   });
 
   describe("recordInteraction", () => {
@@ -64,6 +65,17 @@ describe("CharacterRepository", () => {
         })
       ).rejects.toThrow("Invalid interaction type");
     });
+
+    it("should throw error when user not found", async () => {
+      await expect(
+        repository.recordInteraction({
+          userId: "non-existent-user",
+          characterId,
+          interactionType: INTERACTION_TYPE.TASK_CREATION,
+          context: {},
+        })
+      ).rejects.toThrow("User not found");
+    });
   });
 
   describe("getRecentInteractions", () => {
@@ -75,6 +87,9 @@ describe("CharacterRepository", () => {
         interactionType: INTERACTION_TYPE.TASK_CREATION,
         context: { sequence: 1 },
       });
+
+      // 時間差を作るために少し待つ
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       await repository.recordInteraction({
         userId,

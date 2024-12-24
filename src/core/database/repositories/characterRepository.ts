@@ -1,3 +1,5 @@
+// src/core/database/repositories/characterRepository.ts
+
 import { CharacterInteraction, PrismaClient } from "@prisma/client";
 import { BaseRepository } from "../baseRepository";
 import {
@@ -8,11 +10,22 @@ import {
   InteractionTypeCount,
 } from "../../constants/interaction";
 
+export type InteractionContextInput = {
+  currentMessage?: string;
+  taskId?: string;
+  progress?: number;
+  mood?: "positive" | "neutral" | "negative";
+  previousInteractions?: string[];
+  customData?: Record<string, unknown>;
+  sequence?: number;
+  timestamp?: string;
+};
+
 export interface CreateInteractionInput {
   userId: string;
   characterId: string;
   interactionType: InteractionType;
-  context: InteractionContext;
+  context: InteractionContextInput;
 }
 
 export interface InteractionHistory {
