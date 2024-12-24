@@ -89,22 +89,93 @@ flowchart TD
     CHECK_TASK --> |新規タスク|F_TASK
 ```
 
-### コンポーネント構成図
+## システムフロー
 
+### 1.1 メッセージ処理フロー
 ```mermaid
-graph TD
-    DC[Discord Client] --> Bot[Discord Bot]
-    Bot --> TC[Task Controller]
-    Bot --> CC[Character Controller]
-    Bot --> LC[LLM Controller]
+sequenceDiagram
+    participant User as ユーザー
+    participant Discord as Discord Bot
+    participant State as StateManager
+    participant LLM as LLM Service
+    participant DB as Database
+
+    User->>Discord: メッセージ送信
+    Discord->>State: 状態確認
     
-    TC --> TS[Task Service]
-    CC --> CS[Character Service]
-    LC --> LS[LLM Service]
-    
-    TS --> DB[(Database)]
-    CS --> DB
-    LS --> OAPI[OpenAI API]
+    alt アクティブ状態
+        State->>Discord: 応答許可
+        Discord->>LLM: メッセージ処理
+        LLM-->>Discord: 応答生成
+        Discord-->>User: 応答送信
+        Discord->>LLM: 会話終了判定
+        LLM-->>State: 状態更新
+    else 監視状態
+        State->>Discord: 判断要求
+        Discord->>LLM: 重要度判定
+        LLM-->>Discord: 判断結果
+        alt 重要と判断
+            Discord->>State: アクティブ化
+            Discord->>LLM: メッセージ処理
+            LLM-->>Discord: 応答生成
+            Discord-->>User: 応答送信
+        end
+    else 待機状態
+        alt メンションあり
+            State->>Discord: アクティブ化
+            Discord->>LLM: メッセージ処理
+            LLM-->>Discord: 応答生成
+            Discord-->>User: 応答送信
+        end
+    end
+
+    Discord->>DB: 会話履歴保存
+```
+
+## コンポーネント構成
+
+### 1 会話管理システム
+```mermaid
+graph TB
+    subgraph "会話管理"
+        SM[State Manager]
+        CH[Conversation Handler]
+        CM[Context Manager]
+    end
+
+    subgraph "判断システム"
+        RJ[Response Judge]
+        EJ[End Judge]
+    end
+
+    subgraph "応答生成"
+        CG[Character Generator]
+        PP[Prompt Processor]
+    end
+
+    SM --> CH
+    CH --> CM
+    CH --> RJ
+    CH --> EJ
+    RJ --> CG
+    EJ --> SM
+    CG --> PP
+```
+
+### 2 データフロー
+```mermaid
+flowchart TD
+    M[Message] --> P[Parser]
+    P --> S[State Check]
+    S --> D{Decision}
+    D -->|Active| G[Generate Response]
+    D -->|Monitoring| J[Judge Importance]
+    D -->|Idle| C[Check Mention]
+    J -->|Important| G
+    C -->|Mentioned| G
+    G --> E[End Check]
+    E -->|Continue| U[Update Context]
+    E -->|End| T[Terminate]
 ```
 
 ## 主要コンポーネント
